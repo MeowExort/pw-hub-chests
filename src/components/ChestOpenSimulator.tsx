@@ -148,21 +148,6 @@ export function ChestOpenSimulator({
           <PackageOpen size={20} />
           {isSpinning ? 'Открываем...' : 'Открыть'}
         </button>
-
-        {/* DEBUG: Temporary button for testing rare drop animation */}
-        {chest && (
-            <button
-                onClick={() => {
-                    const sorted = [...chest.rewards].sort((a,b) => a.chance - b.chance);
-                    const rare = sorted[0];
-                    if (rare) setCelebrationItem(rare);
-                }}
-                className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 rounded-md border border-zinc-200 dark:border-zinc-700 text-xs font-mono transition-colors"
-                title="Debug: Force Rare Drop Celebration"
-            >
-                TEST RARE
-            </button>
-        )}
       </div>
 
       {chest && (
