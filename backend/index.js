@@ -125,23 +125,78 @@ function saveChests(ids) {
 }
 
 function saveStats(stats) {
-  try {
-    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
-  } catch (e) {
-    console.error('Error writing stats.json', e);
-  }
+  // Deprecated: use async loop
+  statsDirty = true;
+  broadcastStatsDirty = true;
 }
 
 function saveDrops(drops) {
-  try {
-    fs.writeFileSync(DROPS_FILE, JSON.stringify(drops, null, 2));
-  } catch (e) {
-    console.error('Error writing recent_drops.json', e);
-  }
+  // Deprecated: use async loop
+  dropsDirty = true;
+  broadcastDropsDirty = true;
 }
 
 let globalStats = loadStats();
 let recentDrops = loadDrops();
+
+// Persistence & Broadcast Optimization
+let statsDirty = false;
+let dropsDirty = false;
+let broadcastStatsDirty = false;
+let broadcastDropsDirty = false;
+let isSavingStats = false;
+let isSavingDrops = false;
+
+// Save to disk every 5 seconds if needed
+setInterval(() => {
+  if (statsDirty && !isSavingStats) {
+    isSavingStats = true;
+    // Snapshot to avoid race conditions during async write
+    const data = JSON.stringify(globalStats, null, 2);
+    fs.writeFile(STATS_FILE, data, (err) => {
+      isSavingStats = false;
+      if (err) console.error('Error writing stats.json', err);
+      else statsDirty = false;
+    });
+  }
+
+  if (dropsDirty && !isSavingDrops) {
+    isSavingDrops = true;
+    const data = JSON.stringify(recentDrops, null, 2);
+    fs.writeFile(DROPS_FILE, data, (err) => {
+      isSavingDrops = false;
+      if (err) console.error('Error writing recent_drops.json', err);
+      else dropsDirty = false;
+    });
+  }
+}, 5000);
+
+// Broadcast updates every 200ms
+setInterval(() => {
+  if (!broadcastStatsDirty && !broadcastDropsDirty) return;
+
+  const popularId = getMostPopularChestId(globalStats);
+  const statsMsg = broadcastStatsDirty ? `data: ${JSON.stringify({ 
+    type: 'stats_update', 
+    count: globalStats.totalOpened,
+    mostPopularChestId: popularId
+  })}\n\n` : null;
+
+  const dropsMsg = broadcastDropsDirty ? `data: ${JSON.stringify({ 
+    type: 'drops_update', 
+    items: recentDrops 
+  })}\n\n` : null;
+
+  if (statsMsg || dropsMsg) {
+    clients.forEach(client => {
+      if (statsMsg) client.res.write(statsMsg);
+      if (dropsMsg) client.res.write(dropsMsg);
+    });
+  }
+
+  broadcastStatsDirty = false;
+  broadcastDropsDirty = false;
+}, 200);
 
 function getMostPopularChestId(stats) {
   if (!stats.chestCounts) return null;
@@ -177,15 +232,8 @@ app.post('/api/stats/increment', (req, res) => {
   saveStats(globalStats);
   
   const popularId = getMostPopularChestId(globalStats);
-
-  // Broadcast
-  clients.forEach(client => {
-    client.res.write(`data: ${JSON.stringify({ 
-      type: 'stats_update', 
-      count: globalStats.totalOpened,
-      mostPopularChestId: popularId
-    })}\n\n`);
-  });
+  
+  // Broadcast is handled by async loop now
   
   res.json({ success: true, count: globalStats.totalOpened, mostPopularChestId: popularId });
 });
@@ -210,11 +258,7 @@ app.post('/api/drops', (req, res) => {
   recentDrops = [...newItems, ...recentDrops].slice(0, 50); // Keep last 50
   saveDrops(recentDrops);
 
-  // Broadcast
-  const payload = JSON.stringify({ type: 'drops_update', items: recentDrops });
-  clients.forEach(client => {
-    client.res.write(`data: ${payload}\n\n`);
-  });
+  // Broadcast is handled by async loop now
 
   res.json({ success: true, count: recentDrops.length });
 });
