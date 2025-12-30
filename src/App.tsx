@@ -63,8 +63,8 @@ export default function App() {
       <header className="flex-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 z-20 transition-colors duration-300">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">PW</div>
-             <h1 className="font-semibold text-lg hidden sm:block tracking-tight">Chest Simulator</h1>
+             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">PW Hub</div>
+             <h1 className="font-semibold text-lg hidden sm:block tracking-tight">Симулятор сундуков</h1>
           </div>
 
           <div className="flex items-center gap-3">
