@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useChestStore } from '../state/chestStore';
 import { useGlobalStatsStore } from '../state/globalStatsStore';
 import { pickByChance } from '../lib/weightedRandom';
@@ -25,8 +25,12 @@ export function ChestOpenSimulator({
   hideRewardsList = false, 
   hideSelector = false 
 }: Props) {
-  const { data, addToInventory } = useChestStore();
-  const { incrementGlobalCount, reportDrops } = useGlobalStatsStore();
+  const data = useChestStore(s => s.data);
+  const addToInventory = useChestStore(s => s.addToInventory);
+  
+  const incrementGlobalCount = useGlobalStatsStore(s => s.incrementGlobalCount);
+  const reportDrops = useGlobalStatsStore(s => s.reportDrops);
+
   const [count, setCount] = useState(1);
   const [results, setResults] = useState<ChestRewardItem[]>([]);
   const [celebrationItem, setCelebrationItem] = useState<ChestRewardItem | null>(null);
@@ -80,7 +84,7 @@ export function ChestOpenSimulator({
     }
   };
 
-  const handleRouletteComplete = () => {
+  const handleRouletteComplete = useCallback(() => {
     setIsSpinning(false);
     if (rouletteWinner) {
         addToInventory([rouletteWinner]);
@@ -92,7 +96,7 @@ export function ChestOpenSimulator({
           setCelebrationItem(rouletteWinner);
         }
     }
-  };
+  }, [rouletteWinner, addToInventory, reportDrops]);
 
   const validChests = Object.values(data).filter((c): c is NonNullable<typeof c> => !!c);
 
