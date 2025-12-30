@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-[#09090b] dark:text-zinc-200 transition-colors duration-300;
+  }
+
+  /* Global Scrollbar Styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.slate.200') transparent;
+  }
+
+  /* Chrome, Edge, Safari */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-300;
+  }
+
+  /* Dark Mode Overrides */
+  html.dark * {
+    scrollbar-color: theme('colors.zinc.800') transparent;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-800;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-700;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
