@@ -189,8 +189,14 @@ setInterval(() => {
 
   if (statsMsg || dropsMsg) {
     clients.forEach(client => {
-      if (statsMsg) client.res.write(statsMsg);
-      if (dropsMsg) client.res.write(dropsMsg);
+      try {
+        if (statsMsg) client.res.write(statsMsg);
+        if (dropsMsg) client.res.write(dropsMsg);
+      } catch (e) {
+        console.error(`SSE Broadcast error for client ${client.id}:`, e.message);
+        // Force close to trigger cleanup
+        try { client.res.end(); } catch (err) { /* ignore */ }
+      }
     });
   }
 
