@@ -63,7 +63,7 @@ export default function App() {
       <header className="flex-none bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 z-20 transition-colors duration-300">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">PW Hub</div>
+             <div className="w-auto px-3 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20 whitespace-nowrap">PW Hub</div>
              <h1 className="font-semibold text-lg hidden sm:block tracking-tight">Симулятор сундуков</h1>
           </div>
 
@@ -113,7 +113,7 @@ export default function App() {
       <NotificationManager />
 
       <footer className="flex-none py-2 text-center text-[10px] text-gray-400 dark:text-zinc-600 border-t border-gray-200 dark:border-white/5">
-         <p>Данные предоставлены <a href="https://pwdatabase.ru" target="_blank" className="text-[10px] text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 group-hover:opacity-100 transition-opacity whitespace-nowrap">pwdatabase.ru</a>. Проект создан в образовательных целях благодаря <a href="https://t.me/profgunpw" className="text-[10px] text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 group-hover:opacity-100 transition-opacity whitespace-nowrap">профсоюзу стрелков [tg]</a> .</p>
+         <p>Данные предоставлены <a href="https://pwdatabase.ru" target="_blank" className="text-[10px] text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 group-hover:opacity-100 transition-opacity whitespace-nowrap">pwdatabase.ru</a>. Проект создан в образовательных целях благодаря <a href="https://t.me/profgunpw" target="_blank" className="text-[10px] text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 group-hover:opacity-100 transition-opacity whitespace-nowrap">профсоюзу стрелков [tg]</a> .</p>
       </footer>
     </div>
   );
