@@ -14,6 +14,7 @@ export interface ChestRewardItem {
   iconUrl: string;
   chance: number; // Normalized to sum 100 approx
   link: string;
+  uid?: string;
 }
 
 export interface InventoryItem {

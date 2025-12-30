@@ -33,6 +33,15 @@ app.get('/api/events', (req, res) => {
 
   // Send initial keep-alive or ping
   res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
+  
+  const popularId = getMostPopularChestId(globalStats);
+  res.write(`data: ${JSON.stringify({ 
+    type: 'stats_update', 
+    count: globalStats.totalOpened,
+    mostPopularChestId: popularId
+  })}\n\n`);
+
+  res.write(`data: ${JSON.stringify({ type: 'drops_update', items: recentDrops })}\n\n`);
 
   req.on('close', () => {
     clients = clients.filter(c => c.id !== clientId);
@@ -41,6 +50,8 @@ app.get('/api/events', (req, res) => {
 
 // Load/Save chests persistence
 const DATA_FILE = path.join(__dirname, 'chests.json');
+const STATS_FILE = path.join(__dirname, 'stats.json');
+const DROPS_FILE = path.join(__dirname, 'recent_drops.json');
 
 function loadChests() {
   try {
@@ -50,6 +61,52 @@ function loadChests() {
     }
   } catch (e) {
     console.error('Error reading chests.json', e);
+  }
+  return [];
+}
+
+function loadStats() {
+  try {
+    if (fs.existsSync(STATS_FILE)) {
+      const data = fs.readFileSync(STATS_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      // Migration or Default structure
+      if (!parsed.chestCounts) parsed.chestCounts = {};
+      return parsed;
+    }
+  } catch (e) {
+    console.error('Error reading stats.json', e);
+  }
+  return { totalOpened: 0, chestCounts: {} };
+}
+
+function loadDrops() {
+  try {
+    if (fs.existsSync(DROPS_FILE)) {
+      const data = fs.readFileSync(DROPS_FILE, 'utf8');
+      const drops = JSON.parse(data);
+      
+      // Backfill UIDs for legacy data
+      let changed = false;
+      const patched = drops.map(d => {
+        if (!d.uid) {
+            changed = true;
+            return { ...d, uid: Date.now().toString(36) + Math.random().toString(36).substr(2) };
+        }
+        return d;
+      });
+      
+      if (changed) {
+          try {
+             fs.writeFileSync(DROPS_FILE, JSON.stringify(patched, null, 2));
+          } catch(err) {
+             console.error('Error saving backfilled drops', err);
+          }
+      }
+      return patched;
+    }
+  } catch (e) {
+    console.error('Error reading recent_drops.json', e);
   }
   return [];
 }
@@ -67,7 +124,101 @@ function saveChests(ids) {
   }
 }
 
+function saveStats(stats) {
+  try {
+    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2));
+  } catch (e) {
+    console.error('Error writing stats.json', e);
+  }
+}
+
+function saveDrops(drops) {
+  try {
+    fs.writeFileSync(DROPS_FILE, JSON.stringify(drops, null, 2));
+  } catch (e) {
+    console.error('Error writing recent_drops.json', e);
+  }
+}
+
+let globalStats = loadStats();
+let recentDrops = loadDrops();
+
+function getMostPopularChestId(stats) {
+  if (!stats.chestCounts) return null;
+  let max = -1;
+  let maxId = null;
+  for (const [id, count] of Object.entries(stats.chestCounts)) {
+    if (count > max) {
+      max = count;
+      maxId = Number(id);
+    }
+  }
+  return maxId;
+}
+
 // API Routes
+app.get('/api/stats', (req, res) => {
+  const popularId = getMostPopularChestId(globalStats);
+  res.json({ ...globalStats, mostPopularChestId: popularId });
+});
+
+app.post('/api/stats/increment', (req, res) => {
+  const { count, chestId } = req.body;
+  const incrementBy = typeof count === 'number' ? count : 1;
+  
+  globalStats.totalOpened += incrementBy;
+  
+  if (chestId) {
+    if (!globalStats.chestCounts) globalStats.chestCounts = {};
+    const current = globalStats.chestCounts[chestId] || 0;
+    globalStats.chestCounts[chestId] = current + incrementBy;
+  }
+
+  saveStats(globalStats);
+  
+  const popularId = getMostPopularChestId(globalStats);
+
+  // Broadcast
+  clients.forEach(client => {
+    client.res.write(`data: ${JSON.stringify({ 
+      type: 'stats_update', 
+      count: globalStats.totalOpened,
+      mostPopularChestId: popularId
+    })}\n\n`);
+  });
+  
+  res.json({ success: true, count: globalStats.totalOpened, mostPopularChestId: popularId });
+});
+
+app.get('/api/drops', (req, res) => {
+  res.json(recentDrops);
+});
+
+app.post('/api/drops', (req, res) => {
+  const { items } = req.body;
+  if (!items || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'Invalid items' });
+  }
+
+  // Assign IDs to new items
+  const newItems = items.map(item => ({
+    ...item,
+    uid: Date.now().toString(36) + Math.random().toString(36).substr(2)
+  }));
+
+  // Add new items to the front
+  recentDrops = [...newItems, ...recentDrops].slice(0, 50); // Keep last 50
+  saveDrops(recentDrops);
+
+  // Broadcast
+  const payload = JSON.stringify({ type: 'drops_update', items: recentDrops });
+  clients.forEach(client => {
+    client.res.write(`data: ${payload}\n\n`);
+  });
+
+  res.json({ success: true, count: recentDrops.length });
+});
+
 // Get recent chests
 app.get('/api/admin/recent', (req, res) => {
   const chests = loadChests();

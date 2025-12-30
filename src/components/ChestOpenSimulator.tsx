@@ -1,9 +1,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useChestStore } from '../state/chestStore';
+import { useGlobalStatsStore } from '../state/globalStatsStore';
 import { pickByChance } from '../lib/weightedRandom';
 import { ChestRewardItem } from '../types';
 import { PackageOpen, Coins } from 'lucide-react';
 import { Roulette } from './Roulette';
+import { RareDropCelebration } from './RareDropCelebration';
 import clsx from 'clsx';
 
 interface Props {
@@ -24,8 +26,10 @@ export function ChestOpenSimulator({
   hideSelector = false 
 }: Props) {
   const { data, addToInventory } = useChestStore();
+  const { incrementGlobalCount, reportDrops } = useGlobalStatsStore();
   const [count, setCount] = useState(1);
   const [results, setResults] = useState<ChestRewardItem[]>([]);
+  const [celebrationItem, setCelebrationItem] = useState<ChestRewardItem | null>(null);
   
   // Roulette state
   const [isSpinning, setIsSpinning] = useState(false);
@@ -39,6 +43,7 @@ export function ChestOpenSimulator({
     setResults([]);
     setRouletteWinner(null);
     setIsSpinning(false);
+    setCelebrationItem(null);
   }, [selectedId]);
 
   const groupedResults = useMemo(() => {
@@ -60,12 +65,18 @@ export function ChestOpenSimulator({
       setRouletteWinner(winner);
       setSpinKey(k => k + 1);
       setIsSpinning(true);
+      incrementGlobalCount(1, chest.id);
       // We don't add to inventory yet, wait for animation
     } else {
       const res = pickByChance(chest.rewards, count);
       const newResults = Array.isArray(res) ? res : [res];
       setResults(newResults);
       addToInventory(newResults);
+      incrementGlobalCount(newResults.length, chest.id);
+
+      // Report top 5 rarest drops
+      const sorted = [...newResults].sort((a, b) => a.chance - b.chance);
+      reportDrops(sorted.slice(0, 5));
     }
   };
 
@@ -74,6 +85,12 @@ export function ChestOpenSimulator({
     if (rouletteWinner) {
         addToInventory([rouletteWinner]);
         setResults([rouletteWinner]);
+        reportDrops([rouletteWinner]);
+        
+        // Wow Effect for rare items in roulette mode
+        if (rouletteWinner.chance < 0.09) {
+          setCelebrationItem(rouletteWinner);
+        }
     }
   };
 
@@ -85,6 +102,8 @@ export function ChestOpenSimulator({
 
   return (
     <div className="space-y-6">
+      <RareDropCelebration item={celebrationItem} onClose={() => setCelebrationItem(null)} />
+      
       <div className={clsx(
         "flex gap-4 items-end flex-wrap", 
         compact ? "flex-col items-stretch" : (displayMode === 'roulette' ? "justify-center" : "")
@@ -129,6 +148,21 @@ export function ChestOpenSimulator({
           <PackageOpen size={20} />
           {isSpinning ? 'Открываем...' : 'Открыть'}
         </button>
+
+        {/* DEBUG: Temporary button for testing rare drop animation */}
+        {chest && (
+            <button
+                onClick={() => {
+                    const sorted = [...chest.rewards].sort((a,b) => a.chance - b.chance);
+                    const rare = sorted[0];
+                    if (rare) setCelebrationItem(rare);
+                }}
+                className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 rounded-md border border-zinc-200 dark:border-zinc-700 text-xs font-mono transition-colors"
+                title="Debug: Force Rare Drop Celebration"
+            >
+                TEST RARE
+            </button>
+        )}
       </div>
 
       {chest && (

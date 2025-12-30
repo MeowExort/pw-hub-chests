@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useChestStore } from '../state/chestStore';
 import { ChestOpenSimulator } from '../components/ChestOpenSimulator';
 import { AddChestForm } from '../components/AddChestForm';
@@ -18,6 +18,31 @@ export function LayoutLottery() {
     const id = idParam ? Number(idParam) : null;
     return (id && !isNaN(id)) ? id : null;
   });
+
+  // Sync URL -> State (Handle Back/Forward & External Navigation)
+  useEffect(() => {
+    const handleLocationChange = () => {
+        const params = new URLSearchParams(window.location.search);
+        const idParam = params.get('id');
+        const id = idParam ? Number(idParam) : null;
+        if (id && !isNaN(id)) {
+            setSelectedId(id);
+        }
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  // Sync State -> URL
+  useEffect(() => {
+     if (selectedId) {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('id') !== String(selectedId)) {
+            url.searchParams.set('id', String(selectedId));
+            window.history.replaceState(null, '', url);
+        }
+     }
+  }, [selectedId]);
 
   const selectedChest = useMemo(() => (selectedId ? data[selectedId] : null), [selectedId, data]);
   const rewards = useMemo(() => selectedChest?.rewards || [], [selectedChest]);
